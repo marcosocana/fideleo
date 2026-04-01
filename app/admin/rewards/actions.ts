@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { getSessionContext } from "@/lib/auth/session";
+import { canManageBusinessId, getAdminScope } from "@/lib/auth/admin";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { rewardSchema } from "@/lib/validations/reward";
 
@@ -33,10 +33,14 @@ export async function createRewardAction(_: RewardFormState, formData: FormData)
     return { error: parsed.error.issues[0]?.message ?? "Revisa el formulario." };
   }
 
-  const session = await getSessionContext();
+  const { isSuperadmin, isBusinessAdmin, managedBusinessIds } = await getAdminScope();
 
-  if (!session.roles.some((role) => role === "superadmin" || role === "business_admin")) {
+  if (!isSuperadmin && !isBusinessAdmin) {
     return { error: "No tienes permisos para crear premios." };
+  }
+
+  if (!isSuperadmin && !canManageBusinessId(managedBusinessIds, parsed.data.businessId)) {
+    return { error: "No puedes crear premios en ese negocio." };
   }
 
   const supabase = await getSupabaseServerClient();
@@ -79,9 +83,9 @@ export async function updateRewardAction(
     return { error: parsed.error.issues[0]?.message ?? "Revisa el formulario." };
   }
 
-  const session = await getSessionContext();
+  const { isSuperadmin, isBusinessAdmin, managedBusinessIds } = await getAdminScope();
 
-  if (!session.roles.some((role) => role === "superadmin" || role === "business_admin")) {
+  if (!isSuperadmin && !isBusinessAdmin) {
     return { error: "No tienes permisos para editar premios." };
   }
 
@@ -89,6 +93,18 @@ export async function updateRewardAction(
 
   if (!supabase) {
     return { success: true, rewardId };
+  }
+
+  if (!isSuperadmin) {
+    const { data: currentReward } = await supabase.from("rewards").select("business_id").eq("id", rewardId).maybeSingle();
+
+    if (!currentReward?.business_id || !canManageBusinessId(managedBusinessIds, currentReward.business_id)) {
+      return { error: "No puedes editar premios de otro negocio." };
+    }
+
+    if (!canManageBusinessId(managedBusinessIds, parsed.data.businessId)) {
+      return { error: "No puedes mover el premio a ese negocio." };
+    }
   }
 
   const { error } = await supabase
@@ -116,15 +132,23 @@ export async function updateRewardAction(
 }
 
 export async function deleteRewardAction(rewardId: string): Promise<void> {
-  const session = await getSessionContext();
+  const { isSuperadmin, isBusinessAdmin, managedBusinessIds } = await getAdminScope();
 
-  if (!session.roles.some((role) => role === "superadmin" || role === "business_admin")) {
+  if (!isSuperadmin && !isBusinessAdmin) {
     return;
   }
 
   const supabase = await getSupabaseServerClient();
 
   if (supabase) {
+    if (!isSuperadmin) {
+      const { data: currentReward } = await supabase.from("rewards").select("business_id").eq("id", rewardId).maybeSingle();
+
+      if (!currentReward?.business_id || !canManageBusinessId(managedBusinessIds, currentReward.business_id)) {
+        return;
+      }
+    }
+
     await supabase.from("rewards").delete().eq("id", rewardId);
   }
 

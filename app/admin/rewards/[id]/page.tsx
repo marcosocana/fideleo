@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { getAdminScope } from "@/lib/auth/admin";
 import { deleteRewardAction } from "@/app/admin/rewards/actions";
 import { Button } from "@/components/shared/button";
 import { SectionHeading } from "@/components/shared/section-heading";
@@ -10,8 +11,13 @@ import { formatDate } from "@/lib/utils";
 export default async function RewardDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const reward = await getRewardById(id);
+  const { isSuperadmin, managedBusinessIds } = await getAdminScope();
 
   if (!reward) {
+    notFound();
+  }
+
+  if (!isSuperadmin && !managedBusinessIds.includes(reward.businessId)) {
     notFound();
   }
 

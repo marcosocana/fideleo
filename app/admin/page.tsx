@@ -1,17 +1,21 @@
 import { Button } from "@/components/shared/button";
 import { SectionHeading } from "@/components/shared/section-heading";
 import { StatCard } from "@/components/shared/stat-card";
+import { getAdminScope } from "@/lib/auth/admin";
 import { formatDate } from "@/lib/utils";
 import { getDashboardSnapshot } from "@/lib/data/dashboard";
 
 export default async function AdminDashboardPage() {
-  const { kpis, businesses, recentSignals } = await getDashboardSnapshot();
+  const { isSuperadmin, managedBusinessIds } = await getAdminScope();
+  const { kpis, businesses, recentSignals } = await getDashboardSnapshot({
+    businessIds: isSuperadmin ? undefined : managedBusinessIds
+  });
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
       <SectionHeading
-        eyebrow="Dashboard"
-        title="Vista global de la plataforma"
+        eyebrow={isSuperadmin ? "Dashboard" : "Operación"}
+        title={isSuperadmin ? "Vista global de la plataforma" : "Vista operativa del negocio"}
         description="KPIs clave, progreso por negocio y actividad operativa en tiempo real."
         actions={<Button variant="secondary">Últimos 30 días</Button>}
       />

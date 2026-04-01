@@ -17,7 +17,7 @@ function formatTrend(value: number) {
   return `${value > 0 ? "+" : ""}${value}%`;
 }
 
-export async function getDashboardSnapshot(): Promise<{
+export async function getDashboardSnapshot(options?: { businessIds?: string[] }): Promise<{
   kpis: Kpi[];
   businesses: Awaited<ReturnType<typeof getBusinessesList>>;
   recentSignals: ActivitySignal[];
@@ -37,16 +37,24 @@ export async function getDashboardSnapshot(): Promise<{
     };
   }
 
-  const businesses = await getBusinessesList();
+  const businesses = await getBusinessesList({ ids: options?.businessIds });
   const [{ count: usersCount }, { count: rewardsCount }, { count: transactionCount }, { data: audits }] = await Promise.all([
     supabase.from("profiles").select("*", { count: "exact", head: true }),
     supabase.from("rewards").select("*", { count: "exact", head: true }),
     supabase.from("point_transactions").select("*", { count: "exact", head: true }),
-    supabase
-      .from("audit_logs")
-      .select("id, action, action_type, details, entity_type, created_at")
-      .order("created_at", { ascending: false })
-      .limit(5)
+    (() => {
+      let query = supabase
+        .from("audit_logs")
+        .select("id, action, action_type, details, entity_type, created_at, business_id")
+        .order("created_at", { ascending: false })
+        .limit(5);
+
+      if (options?.businessIds?.length) {
+        query = query.in("business_id", options.businessIds);
+      }
+
+      return query;
+    })()
   ]);
 
   const totalActiveUsers = businesses.reduce((sum, business) => sum + business.activeUsers, 0);

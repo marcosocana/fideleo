@@ -31,6 +31,10 @@ export function BusinessForm({ business }: { business?: Business }) {
         <Input defaultValue={business?.name} name="name" placeholder="Casa Luma" />
       </div>
       <div className="space-y-2">
+        <label className="text-sm font-medium">Responsable</label>
+        <Input defaultValue={business?.ownerName} name="ownerName" placeholder="Lucia Romero" />
+      </div>
+      <div className="space-y-2">
         <label className="text-sm font-medium">Slug</label>
         <Input defaultValue={business?.slug} name="slug" placeholder="casa-luma" />
       </div>
@@ -40,7 +44,7 @@ export function BusinessForm({ business }: { business?: Business }) {
       </div>
       <div className="space-y-2">
         <label className="text-sm font-medium">Teléfono</label>
-        <Input name="ownerPhone" placeholder="+34 600 000 000" />
+        <Input defaultValue={business?.ownerPhone} name="ownerPhone" placeholder="+34 600 000 000" />
       </div>
       <div className="space-y-2">
         <label className="text-sm font-medium">Color principal</label>

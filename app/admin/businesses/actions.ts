@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { getSessionContext } from "@/lib/auth/session";
+import { getAdminScope } from "@/lib/auth/admin";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { businessSchema } from "@/lib/validations/business";
 
@@ -16,6 +16,7 @@ export interface BusinessFormState {
 function getBusinessPayload(formData: FormData) {
   return businessSchema.safeParse({
     name: formData.get("name"),
+    ownerName: formData.get("ownerName"),
     slug: formData.get("slug"),
     ownerEmail: formData.get("ownerEmail"),
     ownerPhone: formData.get("ownerPhone"),
@@ -35,9 +36,9 @@ export async function createBusinessAction(_: BusinessFormState, formData: FormD
     };
   }
 
-  const session = await getSessionContext();
+  const { isSuperadmin } = await getAdminScope();
 
-  if (!session.roles.includes("superadmin")) {
+  if (!isSuperadmin) {
     return {
       error: "Solo un superadmin puede crear negocios."
     };
@@ -57,7 +58,7 @@ export async function createBusinessAction(_: BusinessFormState, formData: FormD
     .insert({
       name: parsed.data.name,
       slug: parsed.data.slug,
-      owner_name: parsed.data.name,
+      owner_name: parsed.data.ownerName,
       owner_email: parsed.data.ownerEmail,
       owner_phone: parsed.data.ownerPhone,
       primary_color: parsed.data.primaryColor,
@@ -95,9 +96,9 @@ export async function updateBusinessAction(
     };
   }
 
-  const session = await getSessionContext();
+  const { isSuperadmin } = await getAdminScope();
 
-  if (!session.roles.includes("superadmin")) {
+  if (!isSuperadmin) {
     return {
       error: "Solo un superadmin puede editar negocios."
     };
@@ -118,7 +119,7 @@ export async function updateBusinessAction(
     .update({
       name: parsed.data.name,
       slug: parsed.data.slug,
-      owner_name: parsed.data.name,
+      owner_name: parsed.data.ownerName,
       owner_email: parsed.data.ownerEmail,
       owner_phone: parsed.data.ownerPhone,
       primary_color: parsed.data.primaryColor,
@@ -145,9 +146,9 @@ export async function updateBusinessAction(
 }
 
 export async function deleteBusinessAction(businessId: string): Promise<void> {
-  const session = await getSessionContext();
+  const { isSuperadmin } = await getAdminScope();
 
-  if (!session.roles.includes("superadmin")) {
+  if (!isSuperadmin) {
     return;
   }
 

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { getAdminScope } from "@/lib/auth/admin";
 import { deleteUserAction } from "@/app/admin/users/actions";
 import { Button } from "@/components/shared/button";
 import { SectionHeading } from "@/components/shared/section-heading";
@@ -9,9 +10,18 @@ import { formatDate } from "@/lib/utils";
 
 export default async function UserDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const { isSuperadmin, managedBusinessIds } = await getAdminScope();
   const customer = await getUserById(id).catch(() => null);
 
   if (!customer) {
+    notFound();
+  }
+
+  if (!isSuperadmin && customer.roles.includes("superadmin")) {
+    notFound();
+  }
+
+  if (!isSuperadmin && customer.primaryBusinessId && !managedBusinessIds.includes(customer.primaryBusinessId)) {
     notFound();
   }
 
@@ -26,9 +36,11 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
             <Link href={`/admin/users/${customer.id}/edit`}>
               <Button variant="secondary">Editar</Button>
             </Link>
-            <form action={deleteUserAction.bind(null, customer.id)}>
-              <Button variant="secondary">Eliminar</Button>
-            </form>
+            {!customer.roles.includes("superadmin") || isSuperadmin ? (
+              <form action={deleteUserAction.bind(null, customer.id)}>
+                <Button variant="secondary">Eliminar</Button>
+              </form>
+            ) : null}
           </>
         }
       />

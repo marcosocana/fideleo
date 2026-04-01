@@ -15,6 +15,13 @@ interface RewardRow {
   is_active: boolean;
 }
 
+interface GetRewardsListOptions {
+  query?: string;
+  businessId?: string;
+  status?: "all" | "active" | "inactive";
+  businessIds?: string[];
+}
+
 function mapRewardRow(row: RewardRow): Reward {
   return {
     id: row.id,
@@ -30,19 +37,47 @@ function mapRewardRow(row: RewardRow): Reward {
   };
 }
 
-export async function getRewardsList() {
+export async function getRewardsList(options: GetRewardsListOptions = {}) {
   const supabase = getSupabaseAdminClient() ?? (await getSupabaseServerClient());
 
   if (!supabase) {
     return [];
   }
 
-  const { data } = await supabase
+  let query = supabase
     .from("rewards")
     .select("id, business_id, title, description, reward_type, points_required, starts_at, ends_at, is_active, businesses(name)")
     .order("created_at", { ascending: false });
 
-  return ((data as unknown as RewardRow[]) ?? []).map(mapRewardRow);
+  if (options.businessId) {
+    query = query.eq("business_id", options.businessId);
+  }
+
+  if (options.businessIds?.length) {
+    query = query.in("business_id", options.businessIds);
+  }
+
+  if (options.status === "active") {
+    query = query.eq("is_active", true);
+  }
+
+  if (options.status === "inactive") {
+    query = query.eq("is_active", false);
+  }
+
+  const { data } = await query;
+
+  const normalizedQuery = options.query?.trim().toLowerCase();
+
+  return ((data as unknown as RewardRow[]) ?? [])
+    .filter((row) => {
+      if (!normalizedQuery) {
+        return true;
+      }
+
+      return [row.title, row.description ?? "", row.businesses?.name ?? ""].join(" ").toLowerCase().includes(normalizedQuery);
+    })
+    .map(mapRewardRow);
 }
 
 export async function getRewardById(id: string) {

@@ -14,12 +14,13 @@ const initialState: UserFormState = {};
 interface UserFormProps {
   businesses: SelectOption[];
   user?: CustomerDetail;
-  role?: "customer" | "business_admin";
+  availableRoles?: Array<"superadmin" | "customer" | "business_admin">;
 }
 
-export function UserForm({ businesses, user, role = "customer" }: UserFormProps) {
+export function UserForm({ businesses, user, availableRoles = ["customer", "business_admin"] }: UserFormProps) {
   const router = useRouter();
-  const inferredBusinessId = user?.memberships[0]?.businessId ?? "";
+  const defaultRole = user?.roles[0] ?? availableRoles[0] ?? "customer";
+  const inferredBusinessId = user?.primaryBusinessId ?? user?.managedBusinessId ?? user?.memberships[0]?.businessId ?? "";
   const action = user ? updateUserAction.bind(null, user.id) : createUserAction;
   const [state, formAction, isPending] = useActionState(action, initialState);
 
@@ -52,9 +53,10 @@ export function UserForm({ businesses, user, role = "customer" }: UserFormProps)
       </div>
       <div className="space-y-2">
         <label className="text-sm font-medium">Rol</label>
-        <select className="input-soft" defaultValue={role} name="role">
-          <option value="customer">Customer</option>
-          <option value="business_admin">Business admin</option>
+        <select className="input-soft" defaultValue={defaultRole} name="role">
+          {availableRoles.includes("customer") ? <option value="customer">Customer</option> : null}
+          {availableRoles.includes("business_admin") ? <option value="business_admin">Business admin</option> : null}
+          {availableRoles.includes("superadmin") ? <option value="superadmin">Superadmin</option> : null}
         </select>
       </div>
       <div className="space-y-2">

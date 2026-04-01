@@ -1,11 +1,23 @@
 import { notFound } from "next/navigation";
 
+import { BrandingForm } from "@/components/admin/branding-form";
 import { SectionHeading } from "@/components/shared/section-heading";
-import { Input } from "@/components/shared/input";
+import { getAdminScope } from "@/lib/auth/admin";
+import { getBusinessOptions } from "@/lib/data/admin-options";
 import { getBusinessesList } from "@/lib/data/businesses";
 
-export default async function BrandingPage() {
-  const business = (await getBusinessesList())[0];
+export default async function BrandingPage({
+  searchParams
+}: {
+  searchParams: Promise<{ businessId?: string }>;
+}) {
+  const params = await searchParams;
+  const { isSuperadmin, managedBusinessIds } = await getAdminScope();
+  const businesses = await getBusinessesList({ ids: isSuperadmin ? undefined : managedBusinessIds });
+  const business =
+    businesses.find((item) => item.id === params.businessId) ??
+    businesses[0];
+  const businessOptions = await getBusinessOptions(isSuperadmin ? undefined : managedBusinessIds);
 
   if (!business) {
     notFound();
@@ -16,43 +28,9 @@ export default async function BrandingPage() {
       <SectionHeading
         eyebrow="Branding"
         title="Personalización de la experiencia cliente"
-        description="Configuración visual del tenant con una previsualización inmediata."
+        description="Configuración visual real del tenant con guardado persistente en Supabase."
       />
-      <section className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
-        <div className="card-surface space-y-5 p-6">
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Color principal</label>
-            <Input defaultValue={business.primaryColor} />
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Color secundario</label>
-            <Input defaultValue={business.secondaryColor} />
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Acento</label>
-            <Input defaultValue={business.accentColor} />
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Welcome text</label>
-            <Input defaultValue={business.welcomeText} />
-          </div>
-        </div>
-        <div className="card-surface overflow-hidden p-4">
-          <div
-            className="rounded-[32px] p-6"
-            style={{ background: `linear-gradient(180deg, ${business.secondaryColor} 0%, #ffffff 100%)` }}
-          >
-            <div className="mx-auto max-w-sm rounded-[28px] p-5 text-white shadow-card" style={{ background: business.primaryColor }}>
-              <p className="text-xs uppercase tracking-[0.18em] text-white/70">Preview</p>
-              <h2 className="mt-3 text-3xl font-semibold">{business.name}</h2>
-              <p className="mt-3 text-sm text-white/75">{business.welcomeText}</p>
-              <div className="mt-6 h-2 rounded-full bg-white/15">
-                <div className="h-2 w-2/3 rounded-full" style={{ background: business.accentColor }} />
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      <BrandingForm business={business} businesses={businessOptions} canSwitchBusiness={isSuperadmin && businessOptions.length > 1} />
     </div>
   );
 }

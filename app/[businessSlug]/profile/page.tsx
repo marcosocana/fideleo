@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 
+import { ProfileQrCard } from "@/components/customer/profile-qr-card";
 import { getBusinessBySlug, getSessionContext } from "@/lib/auth/session";
 import { getMembershipForBusiness } from "@/lib/data/users";
 
@@ -44,6 +45,7 @@ export default async function TenantProfilePage({ params }: { params: Promise<{ 
             </div>
           </div>
         </section>
+        <ProfileQrCard businessId={business.id} userId={session.user.id} />
       </div>
     </main>
   );

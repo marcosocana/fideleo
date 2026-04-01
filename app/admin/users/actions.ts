@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { getSessionContext } from "@/lib/auth/session";
+import { canManageBusinessId, getAdminScope } from "@/lib/auth/admin";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { adminUserSchema } from "@/lib/validations/user";
@@ -33,10 +33,18 @@ export async function createUserAction(_: UserFormState, formData: FormData): Pr
     return { error: parsed.error.issues[0]?.message ?? "Revisa el formulario." };
   }
 
-  const session = await getSessionContext();
+  const { session, isSuperadmin, isBusinessAdmin, managedBusinessIds } = await getAdminScope();
 
-  if (!session.roles.some((role) => role === "superadmin" || role === "business_admin")) {
+  if (!isSuperadmin && !isBusinessAdmin) {
     return { error: "No tienes permisos para crear usuarios." };
+  }
+
+  if (!isSuperadmin && parsed.data.role === "superadmin") {
+    return { error: "Solo un superadmin puede crear otro superadmin." };
+  }
+
+  if (parsed.data.role !== "superadmin" && (!parsed.data.businessId || !canManageBusinessId(managedBusinessIds, parsed.data.businessId))) {
+    return { error: "No puedes asignar usuarios a ese negocio." };
   }
 
   const adminClient = getSupabaseAdminClient();
@@ -116,9 +124,9 @@ export async function updateUserAction(userId: string, _: UserFormState, formDat
     return { error: parsed.error.issues[0]?.message ?? "Revisa el formulario." };
   }
 
-  const session = await getSessionContext();
+  const { session, isSuperadmin, isBusinessAdmin, managedBusinessIds } = await getAdminScope();
 
-  if (!session.roles.some((role) => role === "superadmin" || role === "business_admin")) {
+  if (!isSuperadmin && !isBusinessAdmin) {
     return { error: "No tienes permisos para editar usuarios." };
   }
 
@@ -127,6 +135,33 @@ export async function updateUserAction(userId: string, _: UserFormState, formDat
 
   if (!adminClient || !supabase) {
     return { success: true, userId };
+  }
+
+  const [{ data: currentRoles }, { data: currentAssignments }, { data: currentMemberships }] = await Promise.all([
+    supabase.from("user_roles").select("role").eq("user_id", userId),
+    supabase.from("business_admin_assignments").select("business_id").eq("user_id", userId),
+    supabase.from("business_memberships").select("business_id").eq("user_id", userId)
+  ]);
+
+  const currentManagedBusinessId = currentAssignments?.[0]?.business_id ?? currentMemberships?.[0]?.business_id ?? null;
+  const currentRoleSet = (currentRoles ?? []).map((item) => item.role);
+
+  if (!isSuperadmin) {
+    if (currentRoleSet.includes("superadmin")) {
+      return { error: "No puedes editar un superadmin." };
+    }
+
+    if (currentManagedBusinessId && !canManageBusinessId(managedBusinessIds, currentManagedBusinessId)) {
+      return { error: "No puedes editar usuarios de otro negocio." };
+    }
+
+    if (parsed.data.role === "superadmin") {
+      return { error: "Solo un superadmin puede asignar ese rol." };
+    }
+
+    if (!parsed.data.businessId || !canManageBusinessId(managedBusinessIds, parsed.data.businessId)) {
+      return { error: "No puedes asignar usuarios a ese negocio." };
+    }
   }
 
   const { error: profileError } = await supabase
@@ -193,9 +228,9 @@ export async function updateUserAction(userId: string, _: UserFormState, formDat
 }
 
 export async function deleteUserAction(userId: string): Promise<void> {
-  const session = await getSessionContext();
+  const { isSuperadmin, isBusinessAdmin, managedBusinessIds } = await getAdminScope();
 
-  if (!session.roles.some((role) => role === "superadmin" || role === "business_admin")) {
+  if (!isSuperadmin && !isBusinessAdmin) {
     return;
   }
 
@@ -203,6 +238,24 @@ export async function deleteUserAction(userId: string): Promise<void> {
   const supabase = await getSupabaseServerClient();
 
   if (supabase) {
+    if (!isSuperadmin) {
+      const [{ data: currentRoles }, { data: currentAssignments }, { data: currentMemberships }] = await Promise.all([
+        supabase.from("user_roles").select("role").eq("user_id", userId),
+        supabase.from("business_admin_assignments").select("business_id").eq("user_id", userId),
+        supabase.from("business_memberships").select("business_id").eq("user_id", userId)
+      ]);
+
+      const currentManagedBusinessId = currentAssignments?.[0]?.business_id ?? currentMemberships?.[0]?.business_id ?? null;
+
+      if ((currentRoles ?? []).some((item) => item.role === "superadmin")) {
+        return;
+      }
+
+      if (currentManagedBusinessId && !canManageBusinessId(managedBusinessIds, currentManagedBusinessId)) {
+        return;
+      }
+    }
+
     await supabase.from("business_memberships").delete().eq("user_id", userId);
     await supabase.from("business_admin_assignments").delete().eq("user_id", userId);
     await supabase.from("user_roles").delete().eq("user_id", userId);

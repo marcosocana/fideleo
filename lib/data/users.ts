@@ -15,6 +15,10 @@ interface MembershipRow {
   } | null;
 }
 
+interface AssignmentRow {
+  business_id: string;
+}
+
 interface UserRow {
   id: string;
   first_name: string;
@@ -24,10 +28,21 @@ interface UserRow {
   created_at: string;
   business_memberships: MembershipRow[] | null;
   user_roles?: Array<{ role: string }> | null;
+  business_admin_assignments?: AssignmentRow[] | null;
+}
+
+interface GetUsersListOptions {
+  query?: string;
+  tier?: string;
+  role?: string;
+  businessId?: string;
+  businessIds?: string[];
 }
 
 function mapUserRow(row: UserRow): CustomerSnapshot {
   const memberships = row.business_memberships ?? [];
+  const roles = ((row.user_roles ?? []).map((item) => item.role) as Array<"superadmin" | "business_admin" | "customer">) ?? [];
+  const assignmentBusinessId = row.business_admin_assignments?.[0]?.business_id;
   const totalPoints = memberships.reduce((sum, membership) => sum + membership.current_points, 0);
   const totalRewardsRedeemed = memberships.reduce((sum, membership) => sum + membership.total_points_redeemed, 0);
   const lastActivity = memberships
@@ -43,16 +58,18 @@ function mapUserRow(row: UserRow): CustomerSnapshot {
     lastName: row.last_name,
     email: row.email,
     phone: row.phone ?? undefined,
+    roles,
     currentTier,
     totalPoints,
     totalRewardsRedeemed,
     businessesVisited: memberships.length,
     lastActivity,
-    joinedAt: row.created_at
+    joinedAt: row.created_at,
+    primaryBusinessId: memberships[0]?.business_id ?? assignmentBusinessId
   };
 }
 
-export async function getUsersList() {
+export async function getUsersList(options: GetUsersListOptions = {}) {
   const supabase = getSupabaseAdminClient() ?? (await getSupabaseServerClient());
 
   if (!supabase) {
@@ -62,11 +79,37 @@ export async function getUsersList() {
   const { data } = await supabase
     .from("profiles")
     .select(
-      "id, first_name, last_name, email, phone, created_at, user_roles(role), business_memberships(current_points, current_tier, total_points_redeemed, business_id, last_activity_at)"
+      "id, first_name, last_name, email, phone, created_at, user_roles(role), business_admin_assignments(business_id), business_memberships(current_points, current_tier, total_points_redeemed, business_id, last_activity_at)"
     )
     .order("created_at", { ascending: false });
 
-  return ((data as unknown as UserRow[]) ?? []).map(mapUserRow);
+  const normalizedQuery = options.query?.trim().toLowerCase();
+
+  return ((data as unknown as UserRow[]) ?? [])
+    .map(mapUserRow)
+    .filter((row) => {
+      if (options.businessIds?.length && (!row.primaryBusinessId || !options.businessIds.includes(row.primaryBusinessId))) {
+        return false;
+      }
+
+      if (options.businessId && row.primaryBusinessId !== options.businessId) {
+        return false;
+      }
+
+      if (options.tier && options.tier !== "all" && row.currentTier !== options.tier) {
+        return false;
+      }
+
+      if (options.role && options.role !== "all" && !row.roles.includes(options.role as any)) {
+        return false;
+      }
+
+      if (!normalizedQuery) {
+        return true;
+      }
+
+      return [row.firstName, row.lastName, row.email, row.phone ?? ""].join(" ").toLowerCase().includes(normalizedQuery);
+    });
 }
 
 function mapMemberships(memberships: MembershipRow[]): MembershipSummary[] {
@@ -96,6 +139,11 @@ export async function getUserById(id: string): Promise<CustomerDetail> {
     .eq("id", id)
     .maybeSingle();
 
+  const [{ data: roleRows }, { data: assignmentRows }] = await Promise.all([
+    supabase.from("user_roles").select("role").eq("user_id", id),
+    supabase.from("business_admin_assignments").select("business_id").eq("user_id", id)
+  ]);
+
   const { data: transactions } = await supabase
     .from("point_transactions")
     .select("id, type, points_delta, note, created_at")
@@ -119,7 +167,9 @@ export async function getUserById(id: string): Promise<CustomerDetail> {
   return {
     ...base,
     memberships,
-    recentActivity
+    recentActivity,
+    roles: ((roleRows ?? []).map((item) => item.role) as Array<"superadmin" | "business_admin" | "customer">) ?? [],
+    managedBusinessId: assignmentRows?.[0]?.business_id ?? null
   };
 }
 

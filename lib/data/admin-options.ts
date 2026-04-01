@@ -6,13 +6,19 @@ export interface SelectOption {
   label: string;
 }
 
-export async function getBusinessOptions(): Promise<SelectOption[]> {
+export async function getBusinessOptions(ids?: string[]): Promise<SelectOption[]> {
   const supabase = getSupabaseAdminClient() ?? (await getSupabaseServerClient());
 
   if (!supabase) {
     return [];
   }
 
-  const { data } = await supabase.from("businesses").select("id, name").order("name");
+  let query = supabase.from("businesses").select("id, name").order("name");
+
+  if (ids?.length) {
+    query = query.in("id", ids);
+  }
+
+  const { data } = await query;
   return (data ?? []).map((business) => ({ value: business.id, label: business.name }));
 }

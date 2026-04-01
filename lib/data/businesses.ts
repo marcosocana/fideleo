@@ -9,12 +9,19 @@ interface BusinessRow {
   logo_url: string | null;
   owner_name: string | null;
   owner_email: string | null;
+  owner_phone?: string | null;
   primary_color: string;
   secondary_color: string;
   accent_color: string;
   font_family: string;
   welcome_text: string | null;
   is_active: boolean;
+}
+
+interface GetBusinessesListOptions {
+  query?: string;
+  active?: "all" | "active" | "inactive";
+  ids?: string[];
 }
 
 function mapBusinessRow(row: BusinessRow): Business {
@@ -25,6 +32,7 @@ function mapBusinessRow(row: BusinessRow): Business {
     logo: row.logo_url ?? row.name.slice(0, 2).toUpperCase(),
     ownerName: row.owner_name ?? "",
     ownerEmail: row.owner_email ?? "",
+    ownerPhone: row.owner_phone ?? "",
     primaryColor: row.primary_color,
     secondaryColor: row.secondary_color,
     accentColor: row.accent_color,
@@ -37,18 +45,32 @@ function mapBusinessRow(row: BusinessRow): Business {
   };
 }
 
-export async function getBusinessesList() {
+export async function getBusinessesList(options: GetBusinessesListOptions = {}) {
   const supabase = getSupabaseAdminClient() ?? (await getSupabaseServerClient());
 
   if (!supabase) {
     return [];
   }
 
+  let businessesQuery = supabase
+    .from("businesses")
+    .select("id, name, slug, logo_url, owner_name, owner_email, owner_phone, primary_color, secondary_color, accent_color, font_family, welcome_text, is_active")
+    .order("created_at", { ascending: false });
+
+  if (options.ids?.length) {
+    businessesQuery = businessesQuery.in("id", options.ids);
+  }
+
+  if (options.active === "active") {
+    businessesQuery = businessesQuery.eq("is_active", true);
+  }
+
+  if (options.active === "inactive") {
+    businessesQuery = businessesQuery.eq("is_active", false);
+  }
+
   const [{ data: businessesData }, { data: memberships }, { data: rewards }] = await Promise.all([
-    supabase
-      .from("businesses")
-      .select("id, name, slug, logo_url, owner_name, owner_email, primary_color, secondary_color, accent_color, font_family, welcome_text, is_active")
-      .order("created_at", { ascending: false }),
+    businessesQuery,
     supabase.from("business_memberships").select("business_id, last_activity_at"),
     supabase.from("rewards").select("business_id, is_active")
   ]);
@@ -57,7 +79,20 @@ export async function getBusinessesList() {
     return [];
   }
 
-  return (businessesData as unknown as BusinessRow[]).map((row) => {
+  const normalizedQuery = options.query?.trim().toLowerCase();
+
+  return (businessesData as unknown as BusinessRow[])
+    .filter((row) => {
+      if (!normalizedQuery) {
+        return true;
+      }
+
+      return [row.name, row.slug, row.owner_email ?? "", row.owner_name ?? ""]
+        .join(" ")
+        .toLowerCase()
+        .includes(normalizedQuery);
+    })
+    .map((row) => {
     const base = mapBusinessRow(row);
     const businessMemberships = (memberships ?? []).filter((item: any) => item.business_id === row.id);
     const businessRewards = (rewards ?? []).filter((item: any) => item.business_id === row.id);
@@ -75,7 +110,7 @@ export async function getBusinessesList() {
       }).length,
       activeRewards: businessRewards.filter((item: any) => item.is_active).length
     };
-  });
+    });
 }
 
 export async function getBusinessById(id: string) {
@@ -92,7 +127,7 @@ export async function getBusinessBySlugRecord(slug: string) {
 
   const { data } = await supabase
     .from("businesses")
-    .select("id, name, slug, logo_url, owner_name, owner_email, primary_color, secondary_color, accent_color, font_family, welcome_text, is_active")
+    .select("id, name, slug, logo_url, owner_name, owner_email, owner_phone, primary_color, secondary_color, accent_color, font_family, welcome_text, is_active")
     .eq("slug", slug)
     .eq("is_active", true)
     .maybeSingle();

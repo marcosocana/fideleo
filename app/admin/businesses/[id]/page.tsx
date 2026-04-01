@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { getAdminScope } from "@/lib/auth/admin";
 import { deleteBusinessAction } from "@/app/admin/businesses/actions";
 import { SectionHeading } from "@/components/shared/section-heading";
 import { Button } from "@/components/shared/button";
@@ -8,9 +9,14 @@ import { getBusinessById } from "@/lib/data/businesses";
 
 export default async function BusinessDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const { isSuperadmin, managedBusinessIds } = await getAdminScope();
   const business = await getBusinessById(id);
 
   if (!business) {
+    notFound();
+  }
+
+  if (!isSuperadmin && !managedBusinessIds.includes(business.id)) {
     notFound();
   }
 
@@ -25,9 +31,11 @@ export default async function BusinessDetailPage({ params }: { params: Promise<{
             <Link href={`/admin/businesses/${business.id}/edit`}>
               <Button variant="secondary">Editar</Button>
             </Link>
-            <form action={deleteBusinessAction.bind(null, business.id)}>
-              <Button variant="secondary">Eliminar</Button>
-            </form>
+            {isSuperadmin ? (
+              <form action={deleteBusinessAction.bind(null, business.id)}>
+                <Button variant="secondary">Eliminar</Button>
+              </form>
+            ) : null}
           </>
         }
       />

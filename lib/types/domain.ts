@@ -20,6 +20,7 @@ export interface Business {
   logo: string;
   ownerName: string;
   ownerEmail: string;
+  ownerPhone?: string;
   primaryColor: string;
   secondaryColor: string;
   accentColor: string;
@@ -60,17 +61,20 @@ export interface CustomerSnapshot {
   lastName: string;
   email: string;
   phone?: string;
+  roles: Role[];
   currentTier: string;
   totalPoints: number;
   totalRewardsRedeemed: number;
   businessesVisited: number;
   lastActivity: string;
   joinedAt: string;
+  primaryBusinessId?: string;
 }
 
 export interface CustomerDetail extends CustomerSnapshot {
   memberships: MembershipSummary[];
   recentActivity: ActivityItem[];
+  managedBusinessId?: string | null;
 }
 
 export interface MembershipSummary {

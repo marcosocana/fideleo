@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export const businessSchema = z.object({
   name: z.string().min(2, "El nombre debe tener al menos 2 caracteres."),
+  ownerName: z.string().min(2, "Introduce el nombre de la persona responsable."),
   slug: z
     .string()
     .min(2, "El slug es obligatorio.")

@@ -10,9 +10,10 @@ interface Column<T> {
 interface SimpleTableProps<T> {
   columns: Column<T>[];
   rows: T[];
+  emptyMessage?: string;
 }
 
-export function SimpleTable<T extends { id: string }>({ columns, rows }: SimpleTableProps<T>) {
+export function SimpleTable<T extends { id: string }>({ columns, rows, emptyMessage = "No hay resultados." }: SimpleTableProps<T>) {
   return (
     <div className="card-surface overflow-hidden">
       <div className="overflow-x-auto">
@@ -30,6 +31,13 @@ export function SimpleTable<T extends { id: string }>({ columns, rows }: SimpleT
             </tr>
           </thead>
           <tbody>
+            {rows.length === 0 ? (
+              <tr className="border-t border-line">
+                <td className="px-5 py-8 text-center text-sm text-muted" colSpan={columns.length}>
+                  {emptyMessage}
+                </td>
+              </tr>
+            ) : null}
             {rows.map((row) => (
               <tr key={row.id} className="border-t border-line transition hover:bg-slate-50">
                 {columns.map((column) => (
