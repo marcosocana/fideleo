@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 
 import { deleteBusinessAction } from "@/app/admin/businesses/actions";
 import { SectionHeading } from "@/components/shared/section-heading";
@@ -8,6 +9,10 @@ import { getBusinessById } from "@/lib/data/businesses";
 export default async function BusinessDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const business = await getBusinessById(id);
+
+  if (!business) {
+    notFound();
+  }
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">

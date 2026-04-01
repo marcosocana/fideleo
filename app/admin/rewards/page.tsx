@@ -13,7 +13,7 @@ export default async function RewardsPage() {
       <SectionHeading
         eyebrow="Premios"
         title="Catálogo de recompensas"
-        description="Lectura conectada a Supabase con fallback demo, lista para CRUD, validez y stock."
+        description="Catálogo en tiempo real conectado a Supabase, listo para CRUD, validez y stock."
         actions={
           <Link href="/admin/rewards/new">
             <Button>Nuevo premio</Button>

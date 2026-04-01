@@ -50,10 +50,10 @@ export default async function LoginPage({
             <AdminLoginForm redirectTo={redirectTo} />
 
             <div className="mt-8 rounded-2xl bg-slate-50 p-4 text-sm text-muted">
-              Si faltan variables de entorno, la pantalla cae elegantemente en modo demo. También puedes entrar en la demo visual:
+              El acceso usa Supabase Auth y valida el rol real antes de entrar al panel.
               {" "}
-              <Link className="font-medium text-[color:var(--accent)]" href="/admin">
-                abrir panel
+              <Link className="font-medium text-[color:var(--accent)]" href="/casa-luma">
+                Abrir portal cliente
               </Link>
             </div>
           </div>

@@ -34,7 +34,7 @@ export function AdminLoginForm({ redirectTo = "/admin" }: { redirectTo?: string 
       const supabase = getSupabaseBrowserClient();
 
       if (!supabase) {
-        router.push(redirectTo);
+        setError("Supabase no está configurado correctamente en el cliente.");
         return;
       }
 

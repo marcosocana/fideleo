@@ -1,4 +1,4 @@
-import { businesses as demoBusinesses } from "@/lib/data/demo";
+import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 
 export interface SelectOption {
@@ -7,17 +7,12 @@ export interface SelectOption {
 }
 
 export async function getBusinessOptions(): Promise<SelectOption[]> {
-  const supabase = await getSupabaseServerClient();
+  const supabase = getSupabaseAdminClient() ?? (await getSupabaseServerClient());
 
   if (!supabase) {
-    return demoBusinesses.map((business) => ({ value: business.id, label: business.name }));
+    return [];
   }
 
   const { data } = await supabase.from("businesses").select("id, name").order("name");
-
-  if (!data?.length) {
-    return demoBusinesses.map((business) => ({ value: business.id, label: business.name }));
-  }
-
-  return data.map((business) => ({ value: business.id, label: business.name }));
+  return (data ?? []).map((business) => ({ value: business.id, label: business.name }));
 }

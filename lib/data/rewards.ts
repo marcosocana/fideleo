@@ -1,5 +1,5 @@
-import { rewards as demoRewards } from "@/lib/data/demo";
 import type { Reward } from "@/lib/types/domain";
+import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 
 interface RewardRow {
@@ -31,10 +31,10 @@ function mapRewardRow(row: RewardRow): Reward {
 }
 
 export async function getRewardsList() {
-  const supabase = await getSupabaseServerClient();
+  const supabase = getSupabaseAdminClient() ?? (await getSupabaseServerClient());
 
   if (!supabase) {
-    return demoRewards;
+    return [];
   }
 
   const { data } = await supabase
@@ -42,18 +42,14 @@ export async function getRewardsList() {
     .select("id, business_id, title, description, reward_type, points_required, starts_at, ends_at, is_active, businesses(name)")
     .order("created_at", { ascending: false });
 
-  if (!data?.length) {
-    return demoRewards;
-  }
-
-  return (data as unknown as RewardRow[]).map(mapRewardRow);
+  return ((data as unknown as RewardRow[]) ?? []).map(mapRewardRow);
 }
 
 export async function getRewardById(id: string) {
-  const supabase = await getSupabaseServerClient();
+  const supabase = getSupabaseAdminClient() ?? (await getSupabaseServerClient());
 
   if (!supabase) {
-    return demoRewards.find((reward) => reward.id === id) ?? demoRewards[0];
+    return null;
   }
 
   const { data } = await supabase
@@ -63,8 +59,29 @@ export async function getRewardById(id: string) {
     .maybeSingle();
 
   if (!data) {
-    return demoRewards.find((reward) => reward.id === id) ?? demoRewards[0];
+    return null;
   }
 
   return mapRewardRow(data as unknown as RewardRow);
+}
+
+export async function getRewardsByBusinessId(businessId: string, options?: { activeOnly?: boolean }) {
+  const supabase = await getSupabaseServerClient();
+
+  if (!supabase) {
+    return [];
+  }
+
+  let query = supabase
+    .from("rewards")
+    .select("id, business_id, title, description, reward_type, points_required, starts_at, ends_at, is_active, businesses(name)")
+    .eq("business_id", businessId)
+    .order("points_required", { ascending: true });
+
+  if (options?.activeOnly) {
+    query = query.eq("is_active", true);
+  }
+
+  const { data } = await query;
+  return ((data as unknown as RewardRow[]) ?? []).map(mapRewardRow);
 }

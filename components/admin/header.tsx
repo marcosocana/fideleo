@@ -4,9 +4,15 @@ import { getSessionContext } from "@/lib/auth/session";
 
 export async function AdminHeader() {
   const session = await getSessionContext();
-  const firstName = session.user?.firstName ?? "Demo";
-  const lastName = session.user?.lastName ?? "Admin";
-  const primaryRole = session.roles.includes("superadmin") ? "Superadmin" : session.roles.includes("business_admin") ? "Business admin" : "Demo";
+  const firstName = session.user?.firstName ?? "Usuario";
+  const lastName = session.user?.lastName ?? "";
+  const primaryRole = session.roles.includes("superadmin")
+    ? "Superadmin"
+    : session.roles.includes("business_admin")
+      ? "Business admin"
+      : session.roles.includes("customer")
+        ? "Cliente"
+        : "Sin rol";
 
   return (
     <header className="sticky top-0 z-20 border-b border-[#f1f1f1] bg-white/90 backdrop-blur">

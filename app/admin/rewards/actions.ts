@@ -35,7 +35,7 @@ export async function createRewardAction(_: RewardFormState, formData: FormData)
 
   const session = await getSessionContext();
 
-  if (!session.isDemo && !session.roles.some((role) => role === "superadmin" || role === "business_admin")) {
+  if (!session.roles.some((role) => role === "superadmin" || role === "business_admin")) {
     return { error: "No tienes permisos para crear premios." };
   }
 
@@ -81,7 +81,7 @@ export async function updateRewardAction(
 
   const session = await getSessionContext();
 
-  if (!session.isDemo && !session.roles.some((role) => role === "superadmin" || role === "business_admin")) {
+  if (!session.roles.some((role) => role === "superadmin" || role === "business_admin")) {
     return { error: "No tienes permisos para editar premios." };
   }
 
@@ -118,7 +118,7 @@ export async function updateRewardAction(
 export async function deleteRewardAction(rewardId: string): Promise<void> {
   const session = await getSessionContext();
 
-  if (!session.isDemo && !session.roles.some((role) => role === "superadmin" || role === "business_admin")) {
+  if (!session.roles.some((role) => role === "superadmin" || role === "business_admin")) {
     return;
   }
 

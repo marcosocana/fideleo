@@ -1,11 +1,10 @@
 import { cache } from "react";
 
 import type { Business, Role } from "@/lib/types/domain";
-import { businesses as demoBusinesses, viewer as demoViewer } from "@/lib/data/demo";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
+import { getBusinessBySlugRecord } from "@/lib/data/businesses";
 
 export interface SessionContext {
-  isDemo: boolean;
   isAuthenticated: boolean;
   user: {
     id: string;
@@ -37,11 +36,10 @@ export const getSessionContext = cache(async (): Promise<SessionContext> => {
 
   if (!supabase) {
     return {
-      isDemo: true,
       isAuthenticated: false,
       user: null,
       roles: [],
-      assignedBusinesses: demoBusinesses
+      assignedBusinesses: []
     };
   }
 
@@ -51,7 +49,6 @@ export const getSessionContext = cache(async (): Promise<SessionContext> => {
 
   if (!user) {
     return {
-      isDemo: false,
       isAuthenticated: false,
       user: null,
       roles: [],
@@ -70,7 +67,7 @@ export const getSessionContext = cache(async (): Promise<SessionContext> => {
 
   const roles = ((roleRows ?? []).map((item) => item.role) as Role[]) ?? [];
   const assignmentItems = (assignmentRows ?? []) as Array<{ businesses?: AssignmentBusinessRow | null }>;
-  const assignedBusinesses = assignmentItems
+  let assignedBusinesses = assignmentItems
     .map((item) => item.businesses ?? null)
     .map((item) =>
       item
@@ -95,14 +92,45 @@ export const getSessionContext = cache(async (): Promise<SessionContext> => {
     )
     .filter((item): item is Business => Boolean(item));
 
+  if (assignedBusinesses.length === 0 && roles.includes("business_admin")) {
+    const { data: membershipBusinesses } = await supabase
+      .from("business_memberships")
+      .select("businesses(*)")
+      .eq("user_id", user.id);
+
+    assignedBusinesses = ((membershipBusinesses ?? []) as Array<{ businesses?: AssignmentBusinessRow | null }>)
+      .map((item) => item.businesses ?? null)
+      .map((item) =>
+        item
+          ? {
+              id: item.id,
+              name: item.name,
+              slug: item.slug,
+              logo: item.logo_url ?? item.name.slice(0, 2).toUpperCase(),
+              ownerName: item.owner_name ?? "",
+              ownerEmail: item.owner_email ?? "",
+              primaryColor: item.primary_color,
+              secondaryColor: item.secondary_color,
+              accentColor: item.accent_color,
+              fontFamily: item.font_family,
+              welcomeText: item.welcome_text ?? "",
+              isActive: item.is_active,
+              totalUsers: 0,
+              activeUsers: 0,
+              activeRewards: 0
+            }
+          : null
+      )
+      .filter((item): item is Business => Boolean(item));
+  }
+
   return {
-    isDemo: false,
     isAuthenticated: true,
     user: {
       id: user.id,
-      email: profile?.email ?? user.email ?? demoViewer.email,
-      firstName: profile?.first_name ?? demoViewer.firstName,
-      lastName: profile?.last_name ?? demoViewer.lastName
+      email: profile?.email ?? user.email ?? "",
+      firstName: profile?.first_name ?? user.user_metadata.first_name ?? "",
+      lastName: profile?.last_name ?? user.user_metadata.last_name ?? ""
     },
     roles,
     assignedBusinesses
@@ -110,38 +138,5 @@ export const getSessionContext = cache(async (): Promise<SessionContext> => {
 });
 
 export async function getBusinessBySlug(slug: string) {
-  const supabase = await getSupabaseServerClient();
-
-  if (!supabase) {
-    return demoBusinesses.find((business) => business.slug === slug) ?? null;
-  }
-
-  const { data } = await supabase
-    .from("businesses")
-    .select("id, name, slug, logo_url, owner_name, owner_email, primary_color, secondary_color, accent_color, font_family, welcome_text, is_active")
-    .eq("slug", slug)
-    .eq("is_active", true)
-    .maybeSingle();
-
-  if (!data) {
-    return null;
-  }
-
-  return {
-    id: data.id,
-    name: data.name,
-    slug: data.slug,
-    logo: data.logo_url ?? data.name.slice(0, 2).toUpperCase(),
-    ownerName: data.owner_name ?? "",
-    ownerEmail: data.owner_email ?? "",
-    primaryColor: data.primary_color,
-    secondaryColor: data.secondary_color,
-    accentColor: data.accent_color,
-    fontFamily: data.font_family,
-    welcomeText: data.welcome_text ?? "",
-    isActive: data.is_active,
-    totalUsers: 0,
-    activeUsers: 0,
-    activeRewards: 0
-  } satisfies Business;
+  return getBusinessBySlugRecord(slug);
 }

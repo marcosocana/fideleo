@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 
 import { deleteRewardAction } from "@/app/admin/rewards/actions";
 import { Button } from "@/components/shared/button";
@@ -9,6 +10,10 @@ import { formatDate } from "@/lib/utils";
 export default async function RewardDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const reward = await getRewardById(id);
+
+  if (!reward) {
+    notFound();
+  }
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">

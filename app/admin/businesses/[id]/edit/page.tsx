@@ -1,3 +1,5 @@
+import { notFound } from "next/navigation";
+
 import { BusinessForm } from "@/components/admin/business-form";
 import { SectionHeading } from "@/components/shared/section-heading";
 import { getBusinessById } from "@/lib/data/businesses";
@@ -5,6 +7,10 @@ import { getBusinessById } from "@/lib/data/businesses";
 export default async function EditBusinessPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const business = await getBusinessById(id);
+
+  if (!business) {
+    notFound();
+  }
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">

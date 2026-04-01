@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 
 import { deleteUserAction } from "@/app/admin/users/actions";
 import { Button } from "@/components/shared/button";
@@ -8,7 +9,11 @@ import { formatDate } from "@/lib/utils";
 
 export default async function UserDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const customer = await getUserById(id);
+  const customer = await getUserById(id).catch(() => null);
+
+  if (!customer) {
+    notFound();
+  }
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">

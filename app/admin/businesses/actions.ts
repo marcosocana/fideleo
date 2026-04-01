@@ -37,7 +37,7 @@ export async function createBusinessAction(_: BusinessFormState, formData: FormD
 
   const session = await getSessionContext();
 
-  if (!session.isDemo && !session.roles.includes("superadmin")) {
+  if (!session.roles.includes("superadmin")) {
     return {
       error: "Solo un superadmin puede crear negocios."
     };
@@ -97,7 +97,7 @@ export async function updateBusinessAction(
 
   const session = await getSessionContext();
 
-  if (!session.isDemo && !session.roles.includes("superadmin")) {
+  if (!session.roles.includes("superadmin")) {
     return {
       error: "Solo un superadmin puede editar negocios."
     };
@@ -147,7 +147,7 @@ export async function updateBusinessAction(
 export async function deleteBusinessAction(businessId: string): Promise<void> {
   const session = await getSessionContext();
 
-  if (!session.isDemo && !session.roles.includes("superadmin")) {
+  if (!session.roles.includes("superadmin")) {
     return;
   }
 

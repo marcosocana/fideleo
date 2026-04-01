@@ -35,7 +35,7 @@ export async function createUserAction(_: UserFormState, formData: FormData): Pr
 
   const session = await getSessionContext();
 
-  if (!session.isDemo && !session.roles.some((role) => role === "superadmin" || role === "business_admin")) {
+  if (!session.roles.some((role) => role === "superadmin" || role === "business_admin")) {
     return { error: "No tienes permisos para crear usuarios." };
   }
 
@@ -118,7 +118,7 @@ export async function updateUserAction(userId: string, _: UserFormState, formDat
 
   const session = await getSessionContext();
 
-  if (!session.isDemo && !session.roles.some((role) => role === "superadmin" || role === "business_admin")) {
+  if (!session.roles.some((role) => role === "superadmin" || role === "business_admin")) {
     return { error: "No tienes permisos para editar usuarios." };
   }
 
@@ -195,7 +195,7 @@ export async function updateUserAction(userId: string, _: UserFormState, formDat
 export async function deleteUserAction(userId: string): Promise<void> {
   const session = await getSessionContext();
 
-  if (!session.isDemo && !session.roles.some((role) => role === "superadmin" || role === "business_admin")) {
+  if (!session.roles.some((role) => role === "superadmin" || role === "business_admin")) {
     return;
   }
 

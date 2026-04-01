@@ -22,7 +22,7 @@ export async function addPointAction(_: ScoringState, formData: FormData): Promi
 
   const session = await getSessionContext();
 
-  if (!session.isDemo && !session.roles.some((role) => role === "superadmin" || role === "business_admin")) {
+  if (!session.roles.some((role) => role === "superadmin" || role === "business_admin")) {
     return { error: "No tienes permisos para puntuar." };
   }
 

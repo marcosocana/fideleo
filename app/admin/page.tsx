@@ -1,20 +1,23 @@
 import { Button } from "@/components/shared/button";
 import { SectionHeading } from "@/components/shared/section-heading";
 import { StatCard } from "@/components/shared/stat-card";
-import { businesses, superadminKpis } from "@/lib/data/demo";
+import { formatDate } from "@/lib/utils";
+import { getDashboardSnapshot } from "@/lib/data/dashboard";
 
-export default function AdminDashboardPage() {
+export default async function AdminDashboardPage() {
+  const { kpis, businesses, recentSignals } = await getDashboardSnapshot();
+
   return (
     <div className="mx-auto max-w-7xl space-y-6">
       <SectionHeading
         eyebrow="Dashboard"
         title="Vista global de la plataforma"
-        description="KPIs clave, progreso por negocio y una base visual lista para conectar con Supabase."
+        description="KPIs clave, progreso por negocio y actividad operativa en tiempo real."
         actions={<Button variant="secondary">Últimos 30 días</Button>}
       />
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {superadminKpis.map((kpi) => (
+        {kpis.map((kpi) => (
           <StatCard key={kpi.label} {...kpi} />
         ))}
       </section>
@@ -29,6 +32,11 @@ export default function AdminDashboardPage() {
             <Button variant="secondary">Ver detalles</Button>
           </div>
           <div className="mt-6 space-y-4">
+            {businesses.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-line bg-slate-50/70 p-4 text-sm text-muted">
+                No hay negocios registrados todavía.
+              </div>
+            ) : null}
             {businesses.map((business) => (
               <div key={business.id} className="rounded-2xl border border-line bg-slate-50/70 p-4">
                 <div className="flex flex-wrap items-center justify-between gap-4">
@@ -53,14 +61,13 @@ export default function AdminDashboardPage() {
             <h2 className="mt-1 text-2xl font-semibold">Señales operativas</h2>
           </div>
           <div className="space-y-0">
-            {[
-              "Casa Luma activó una nueva misión semanal.",
-              "Brasa Norte canjeó 14 premios esta semana.",
-              "3 nuevos admins fueron invitados.",
-              "La media de uso del puntuador subió un 9%."
-            ].map((item) => (
-              <div key={item} className="border-t border-line px-6 py-4 text-sm text-muted first:border-t-0">
-                {item}
+            {recentSignals.length === 0 ? (
+              <div className="px-6 py-4 text-sm text-muted">Todavía no hay eventos recientes.</div>
+            ) : null}
+            {recentSignals.map((item) => (
+              <div key={item.id} className="border-t border-line px-6 py-4 text-sm text-muted first:border-t-0">
+                <p>{item.message}</p>
+                <p className="mt-1 text-xs">{formatDate(item.createdAt)}</p>
               </div>
             ))}
           </div>

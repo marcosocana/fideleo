@@ -52,7 +52,7 @@ export function CustomerAuthPanel({ business }: CustomerAuthPanelProps) {
       const supabase = getSupabaseBrowserClient();
 
       if (!supabase) {
-        router.refresh();
+        setError("Supabase no está configurado correctamente en el cliente.");
         return;
       }
 
@@ -75,7 +75,7 @@ export function CustomerAuthPanel({ business }: CustomerAuthPanelProps) {
       const supabase = getSupabaseBrowserClient();
 
       if (!supabase) {
-        setFeedback("Entorno demo activo. Configura Supabase para registrar clientes reales.");
+        setError("Supabase no está configurado correctamente en el cliente.");
         return;
       }
 

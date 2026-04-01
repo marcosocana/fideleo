@@ -1,9 +1,15 @@
+import { notFound } from "next/navigation";
+
 import { SectionHeading } from "@/components/shared/section-heading";
 import { Input } from "@/components/shared/input";
-import { businesses } from "@/lib/data/demo";
+import { getBusinessesList } from "@/lib/data/businesses";
 
-export default function BrandingPage() {
-  const business = businesses[0];
+export default async function BrandingPage() {
+  const business = (await getBusinessesList())[0];
+
+  if (!business) {
+    notFound();
+  }
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
