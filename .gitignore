@@ -6,3 +6,4 @@ tsconfig.tsbuildinfo
 tsconfig.typecheck.tsbuildinfo
 *.log
 .DS_Store
+.vercel
