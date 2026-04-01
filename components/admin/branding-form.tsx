@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useState } from "react";
 
 import { type BrandingFormState, updateBrandingAction } from "@/app/admin/branding/actions";
 import { Button } from "@/components/shared/button";
@@ -20,9 +20,26 @@ export function BrandingForm({
   canSwitchBusiness: boolean;
 }) {
   const [state, formAction, isPending] = useActionState(updateBrandingAction, initialState);
+  const [isDirty, setIsDirty] = useState(false);
+  const [preview, setPreview] = useState({
+    primaryColor: business.primaryColor,
+    secondaryColor: business.secondaryColor,
+    accentColor: business.accentColor,
+    welcomeText: business.welcomeText
+  });
+
+  useEffect(() => {
+    setIsDirty(false);
+    setPreview({
+      primaryColor: business.primaryColor,
+      secondaryColor: business.secondaryColor,
+      accentColor: business.accentColor,
+      welcomeText: business.welcomeText
+    });
+  }, [business.id]);
 
   return (
-    <form action={formAction} className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
+    <form action={formAction} className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]" onChange={() => setIsDirty(true)}>
       <input name="businessId" type="hidden" value={business.id} />
       <div className="card-surface space-y-5 p-6">
         {canSwitchBusiness ? (
@@ -48,35 +65,51 @@ export function BrandingForm({
         ) : null}
         <div className="space-y-2">
           <label className="text-sm font-medium">Color principal</label>
-          <Input defaultValue={business.primaryColor} name="primaryColor" />
+          <Input
+            name="primaryColor"
+            onChange={(event) => setPreview((current) => ({ ...current, primaryColor: event.currentTarget.value }))}
+            value={preview.primaryColor}
+          />
         </div>
         <div className="space-y-2">
           <label className="text-sm font-medium">Color secundario</label>
-          <Input defaultValue={business.secondaryColor} name="secondaryColor" />
+          <Input
+            name="secondaryColor"
+            onChange={(event) => setPreview((current) => ({ ...current, secondaryColor: event.currentTarget.value }))}
+            value={preview.secondaryColor}
+          />
         </div>
         <div className="space-y-2">
           <label className="text-sm font-medium">Acento</label>
-          <Input defaultValue={business.accentColor} name="accentColor" />
+          <Input
+            name="accentColor"
+            onChange={(event) => setPreview((current) => ({ ...current, accentColor: event.currentTarget.value }))}
+            value={preview.accentColor}
+          />
         </div>
         <div className="space-y-2">
           <label className="text-sm font-medium">Welcome text</label>
-          <Input defaultValue={business.welcomeText} name="welcomeText" />
+          <Input
+            name="welcomeText"
+            onChange={(event) => setPreview((current) => ({ ...current, welcomeText: event.currentTarget.value }))}
+            value={preview.welcomeText}
+          />
         </div>
         {state.error ? <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">{state.error}</p> : null}
         {state.success ? <p className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">Branding actualizado.</p> : null}
-        <Button disabled={isPending}>{isPending ? "Guardando..." : "Guardar branding"}</Button>
+        <Button disabled={isPending || !isDirty}>{isPending ? "Guardando..." : "Guardar branding"}</Button>
       </div>
       <div className="card-surface overflow-hidden p-4">
         <div
           className="rounded-[32px] p-6"
-          style={{ background: `linear-gradient(180deg, ${business.secondaryColor} 0%, #ffffff 100%)` }}
+          style={{ background: `linear-gradient(180deg, ${preview.secondaryColor} 0%, #ffffff 100%)` }}
         >
-          <div className="mx-auto max-w-sm rounded-[28px] p-5 text-white shadow-card" style={{ background: business.primaryColor }}>
+          <div className="mx-auto max-w-sm rounded-[28px] p-5 text-white shadow-card" style={{ background: preview.primaryColor }}>
             <p className="text-xs uppercase tracking-[0.18em] text-white/70">Preview</p>
             <h2 className="mt-3 text-3xl font-semibold">{business.name}</h2>
-            <p className="mt-3 text-sm text-white/75">{business.welcomeText}</p>
+            <p className="mt-3 text-sm text-white/75">{preview.welcomeText}</p>
             <div className="mt-6 h-2 rounded-full bg-white/15">
-              <div className="h-2 w-2/3 rounded-full" style={{ background: business.accentColor }} />
+              <div className="h-2 w-2/3 rounded-full" style={{ background: preview.accentColor }} />
             </div>
           </div>
         </div>

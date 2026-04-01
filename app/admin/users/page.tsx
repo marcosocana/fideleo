@@ -21,7 +21,8 @@ export default async function UsersPage({
       tier: params.tier ?? "all",
       role: params.role ?? "all",
       businessId: params.businessId,
-      businessIds: isSuperadmin ? undefined : managedBusinessIds
+      businessIds: isSuperadmin ? undefined : managedBusinessIds,
+      requireTransactions: true
     }),
     getBusinessOptions(isSuperadmin ? undefined : managedBusinessIds)
   ]);

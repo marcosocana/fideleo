@@ -37,6 +37,7 @@ interface GetUsersListOptions {
   role?: string;
   businessId?: string;
   businessIds?: string[];
+  requireTransactions?: boolean;
 }
 
 function mapUserRow(row: UserRow): CustomerSnapshot {
@@ -83,6 +84,23 @@ export async function getUsersList(options: GetUsersListOptions = {}) {
     )
     .order("created_at", { ascending: false });
 
+  let transactedUserIds: Set<string> | null = null;
+
+  if (options.requireTransactions) {
+    let transactionsQuery = supabase.from("point_transactions").select("user_id, business_id").not("user_id", "is", null);
+
+    if (options.businessId) {
+      transactionsQuery = transactionsQuery.eq("business_id", options.businessId);
+    } else if (options.businessIds?.length) {
+      transactionsQuery = transactionsQuery.in("business_id", options.businessIds);
+    } else {
+      transactionsQuery = transactionsQuery.not("business_id", "is", null);
+    }
+
+    const { data: transactions } = await transactionsQuery;
+    transactedUserIds = new Set((transactions ?? []).map((item: any) => item.user_id).filter(Boolean));
+  }
+
   const normalizedQuery = options.query?.trim().toLowerCase();
 
   return ((data as unknown as UserRow[]) ?? [])
@@ -102,6 +120,16 @@ export async function getUsersList(options: GetUsersListOptions = {}) {
 
       if (options.role && options.role !== "all" && !row.roles.includes(options.role as any)) {
         return false;
+      }
+
+      if (options.requireTransactions) {
+        if (!row.roles.includes("customer")) {
+          return false;
+        }
+
+        if (!transactedUserIds?.has(row.id)) {
+          return false;
+        }
       }
 
       if (!normalizedQuery) {

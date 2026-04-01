@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { createRewardAction, type RewardFormState, updateRewardAction } from "@/app/admin/rewards/actions";
@@ -20,6 +20,7 @@ export function RewardForm({ businesses, reward }: RewardFormProps) {
   const router = useRouter();
   const action = reward ? updateRewardAction.bind(null, reward.id) : createRewardAction;
   const [state, formAction, isPending] = useActionState(action, initialState);
+  const [isDirty, setIsDirty] = useState(!reward);
 
   useEffect(() => {
     if (!state.success) {
@@ -30,8 +31,12 @@ export function RewardForm({ businesses, reward }: RewardFormProps) {
     router.refresh();
   }, [router, state.rewardId, state.success]);
 
+  useEffect(() => {
+    setIsDirty(!reward);
+  }, [reward]);
+
   return (
-    <form action={formAction} className="card-surface grid gap-5 p-6 md:grid-cols-2">
+    <form action={formAction} className="card-surface grid gap-5 p-6 md:grid-cols-2" onChange={() => setIsDirty(true)}>
       <div className="space-y-2">
         <label className="text-sm font-medium">Negocio</label>
         <select className="input-soft" defaultValue={reward?.businessId ?? businesses[0]?.value} name="businessId">
@@ -84,7 +89,7 @@ export function RewardForm({ businesses, reward }: RewardFormProps) {
       </div>
       {state.error ? <p className="md:col-span-2 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">{state.error}</p> : null}
       <div className="md:col-span-2">
-        <Button disabled={isPending}>{isPending ? "Guardando..." : reward ? "Guardar cambios" : "Crear premio"}</Button>
+        <Button disabled={isPending || !isDirty}>{isPending ? "Guardando..." : reward ? "Guardar cambios" : "Crear premio"}</Button>
       </div>
     </form>
   );

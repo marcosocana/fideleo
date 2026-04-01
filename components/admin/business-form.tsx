@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { createBusinessAction, type BusinessFormState, updateBusinessAction } from "@/app/admin/businesses/actions";
@@ -14,6 +14,7 @@ export function BusinessForm({ business }: { business?: Business }) {
   const router = useRouter();
   const action = business ? updateBusinessAction.bind(null, business.id) : createBusinessAction;
   const [state, formAction, isPending] = useActionState(action, initialState);
+  const [isDirty, setIsDirty] = useState(!business);
 
   useEffect(() => {
     if (!state.success) {
@@ -24,8 +25,12 @@ export function BusinessForm({ business }: { business?: Business }) {
     router.refresh();
   }, [router, state.businessId, state.success]);
 
+  useEffect(() => {
+    setIsDirty(!business);
+  }, [business]);
+
   return (
-    <form action={formAction} className="card-surface grid gap-5 p-6 md:grid-cols-2">
+    <form action={formAction} className="card-surface grid gap-5 p-6 md:grid-cols-2" onChange={() => setIsDirty(true)}>
       <div className="space-y-2">
         <label className="text-sm font-medium">Nombre</label>
         <Input defaultValue={business?.name} name="name" placeholder="Casa Luma" />
@@ -64,7 +69,7 @@ export function BusinessForm({ business }: { business?: Business }) {
       </div>
       {state.error ? <p className="md:col-span-2 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">{state.error}</p> : null}
       <div className="md:col-span-2">
-        <Button disabled={isPending}>{isPending ? "Guardando..." : business ? "Guardar cambios" : "Guardar negocio"}</Button>
+        <Button disabled={isPending || !isDirty}>{isPending ? "Guardando..." : business ? "Guardar cambios" : "Guardar negocio"}</Button>
       </div>
     </form>
   );

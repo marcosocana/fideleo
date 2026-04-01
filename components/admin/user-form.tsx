@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { createUserAction, type UserFormState, updateUserAction } from "@/app/admin/users/actions";
@@ -23,6 +23,7 @@ export function UserForm({ businesses, user, availableRoles = ["customer", "busi
   const inferredBusinessId = user?.primaryBusinessId ?? user?.managedBusinessId ?? user?.memberships[0]?.businessId ?? "";
   const action = user ? updateUserAction.bind(null, user.id) : createUserAction;
   const [state, formAction, isPending] = useActionState(action, initialState);
+  const [isDirty, setIsDirty] = useState(!user);
 
   useEffect(() => {
     if (!state.success) {
@@ -33,8 +34,12 @@ export function UserForm({ businesses, user, availableRoles = ["customer", "busi
     router.refresh();
   }, [router, state.success, state.userId]);
 
+  useEffect(() => {
+    setIsDirty(!user);
+  }, [user]);
+
   return (
-    <form action={formAction} className="card-surface grid gap-5 p-6 md:grid-cols-2">
+    <form action={formAction} className="card-surface grid gap-5 p-6 md:grid-cols-2" onChange={() => setIsDirty(true)}>
       <div className="space-y-2">
         <label className="text-sm font-medium">Nombre</label>
         <Input defaultValue={user?.firstName} name="firstName" />
@@ -76,7 +81,7 @@ export function UserForm({ businesses, user, availableRoles = ["customer", "busi
       </div>
       {state.error ? <p className="md:col-span-2 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">{state.error}</p> : null}
       <div className="md:col-span-2">
-        <Button disabled={isPending}>{isPending ? "Guardando..." : user ? "Guardar usuario" : "Crear usuario"}</Button>
+        <Button disabled={isPending || !isDirty}>{isPending ? "Guardando..." : user ? "Guardar usuario" : "Crear usuario"}</Button>
       </div>
     </form>
   );
